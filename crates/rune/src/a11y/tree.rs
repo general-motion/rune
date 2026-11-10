@@ -38,6 +38,9 @@ struct Stamp {
     viewport: (u32, u32, u32),
     name: u64,
     tooltip: u64,
+    /// The versions of the elements' live values (`El::a11y_value_live`), which change on
+    /// frames without a commit.
+    live_values: u128,
 }
 
 /// An activated tree: what the platform adapter holds, to diff the next update against.
@@ -292,6 +295,9 @@ impl<S: 'static> Runtime<S> {
             viewport: (self.viewport.0.to_bits(), self.viewport.1.to_bits(), self.env.scale.to_bits()),
             name: self.window_title.current().map_or(0, hash_str),
             tooltip: self.help_tooltip().map_or(0, |(t, r)| mix(hash_str(t), r[0].to_bits() as u64 ^ (r[1].to_bits() as u64) << 32)),
+            live_values: self.nodes.iter()
+                .filter_map(|n| n.a11y.more.as_deref()?.value_live.as_ref())
+                .fold(0u128, |sum, live| sum.wrapping_mul(0x9E37_79B9_7F4A_7C15).wrapping_add(live.version())),
         }
     }
 

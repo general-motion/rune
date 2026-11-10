@@ -39,6 +39,8 @@ pub(crate) struct Range {
 pub(crate) struct A11yMore {
     pub description: Option<String>,
     pub value: Option<String>,
+    /// `El::a11y_value_live`: a value read when the tree is built, which replaces `value`.
+    pub value_live: Option<crate::LiveText>,
     pub range: Option<Range>,
     /// 1-based position and the set's size.
     pub set: Option<(usize, usize)>,
@@ -135,6 +137,13 @@ impl El {
     /// report their text and range controls their number without it.
     pub fn a11y_value(mut self, text: impl Into<String>) -> Self {
         self.a11y.more().value = Some(text.into());
+        self
+    }
+    /// [`El::a11y_value`] from a [`LiveText`](crate::LiveText): assistive technology hears its
+    /// latest text without the view running again, as `live_text` paints it. A playhead's
+    /// position, a meter's level: values that change on frames where nothing else does.
+    pub fn a11y_value_live(mut self, value: &crate::LiveText) -> Self {
+        self.a11y.more().value_live = Some(value.clone());
         self
     }
     /// A slider's or progress bar's number, between `min` and `max` (ARIA `aria-valuenow`,

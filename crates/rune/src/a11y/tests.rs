@@ -440,3 +440,28 @@ fn updates_report_structure_and_motion_beyond_accesskit_events() {
     assert!(rt.a11y_update().is_some(), "a scroll sends its viewport");
     assert!(rt.a11y_changes().moved, "a scroll moves boxes");
 }
+
+/// A scrubber whose spoken position is a live value, set from outside the view.
+struct Scrub { spoken: crate::LiveText }
+
+fn scrub(s: &Scrub, _: &mut Cx<Scrub>) -> El {
+    col().child(crate::el().key("scrub").role("slider").label("Playhead").a11y_value_live(&s.spoken).size(100.0, 12.0))
+}
+
+#[test]
+fn a_live_value_reaches_the_tree_without_a_commit() {
+    let spoken = crate::LiveText::new("0%");
+    let mut rt = Runtime::new(Scrub { spoken: spoken.clone() }, scrub, (300.0, 100.0), Env::new(true, 1.0));
+    rt.frame(0.0);
+    rt.a11y_activate("Scrub");
+    rt.a11y_update();
+    let commits = rt.commits;
+
+    spoken.set("42%");
+    rt.frame(0.0);
+    let update = rt.a11y_update().expect("the value changed");
+
+    assert_eq!(rt.commits, commits);
+    let (_, node) = update.nodes.iter().find(|(_, n)| n.author_id() == Some("scrub")).expect("the slider was sent");
+    assert_eq!(node.value(), Some("42%"));
+}

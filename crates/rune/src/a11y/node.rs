@@ -54,6 +54,7 @@ impl<S: 'static> Runtime<S> {
         n.a11y.live.hash(&mut h);
         if let Some(m) = n.a11y.more.as_deref() {
             (&m.description, &m.value, &m.set, &m.shortcut, m.invalid, m.read_only, m.sorted).hash(&mut h);
+            m.value_live.as_ref().map(crate::LiveText::get).hash(&mut h);
             if let Some(r) = m.range { [r.value, r.min, r.max, r.step.unwrap_or(f64::NAN)].map(f64::to_bits).hash(&mut h); }
             self.a11y_active_descendant(i).map(|j| self.nodes[j].id.0).hash(&mut h);
         }
@@ -159,7 +160,8 @@ impl<S: 'static> Runtime<S> {
             }
             if let Some(j) = self.a11y_active_descendant(i) { node.set_active_descendant(super::a11y_tree::element_id(self.nodes[j].id)); }
         }
-        if let Some(v) = more.and_then(|m| m.value.as_deref()) { node.set_value(v); }
+        if let Some(v) = more.and_then(|m| m.value_live.as_ref()) { node.set_value(&*v.get()); }
+        else if let Some(v) = more.and_then(|m| m.value.as_deref()) { node.set_value(v); }
         if let Some(r) = more.and_then(|m| m.range) {
             node.set_numeric_value(r.value);
             node.set_min_numeric_value(r.min);

@@ -67,6 +67,10 @@ impl std::fmt::Debug for LiveText {
         f.debug_struct("LiveText").finish_non_exhaustive()
     }
 }
+/// The same binding: clones of one `LiveText`, whatever text they hold.
+impl PartialEq for LiveText {
+    fn eq(&self, other: &Self) -> bool { Arc::ptr_eq(&self.text, &other.text) }
+}
 impl LiveText {
     pub fn new(text: impl Into<Arc<str>>) -> Self {
         Self { text: Arc::new(Mutex::new(text.into())), source: Source::new(0) }
@@ -83,6 +87,8 @@ impl LiveText {
         self.source.notify();
         true
     }
+    /// Counts the changes `set` made, so a reader can tell the text moved without reading it.
+    pub(crate) fn version(&self) -> u128 { self.source.value.load(Ordering::Acquire) }
     pub(crate) fn read(&self, seen: &mut Option<u128>) -> Option<Arc<str>> {
         if *seen == Some(self.source.value.load(Ordering::Acquire)) { return None; }
         let text = self.text.lock().unwrap();
